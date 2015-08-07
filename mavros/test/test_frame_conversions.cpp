@@ -10,8 +10,15 @@
 using mavros::UAS;
 
 static const double epsilon = 1e-9;
+static const double epsilon_f = 1e-6;
 // gMock has ability to define array matcher, but there problems with that.
 // so trying good old for loop
+
+#define EXPECT_QUATERNION(q1, q2, epsilon)	\
+	EXPECT_NEAR(q1.w(), q2.w(), epsilon);	\
+	EXPECT_NEAR(q1.x(), q2.x(), epsilon);	\
+	EXPECT_NEAR(q1.y(), q2.y(), epsilon);	\
+	EXPECT_NEAR(q1.z(), q2.z(), epsilon)
 
 /* -*- test general transform function -*- */
 
@@ -34,10 +41,7 @@ TEST(UAS, transform_frame__quaterniond_123)
 
 	auto out = UAS::transform_frame(input);
 
-	EXPECT_NEAR(expected.w(), out.w(), epsilon);
-	EXPECT_NEAR(expected.x(), out.x(), epsilon);
-	EXPECT_NEAR(expected.y(), out.y(), epsilon);
-	EXPECT_NEAR(expected.z(), out.z(), epsilon);
+	EXPECT_QUATERNION(expected, out, epsilon);
 }
 
 TEST(UAS, transform_frame__covariance3x3)
@@ -98,39 +102,6 @@ TEST(UAS,  transform_frame__covariance6x6)
 }
 #endif
 
-TEST(UAS, quaternion_from_rpy__check_compatibility)
-{
-	auto eigen_q = UAS::quaternion_from_rpy(1.0, 2.0, 3.0);
-	auto bt_q = tf::createQuaternionFromRPY(1.0, 2.0, 3.0);
-
-	EXPECT_NEAR(bt_q.w(), eigen_q.w(), epsilon);
-	EXPECT_NEAR(bt_q.x(), eigen_q.x(), epsilon);
-	EXPECT_NEAR(bt_q.y(), eigen_q.y(), epsilon);
-	EXPECT_NEAR(bt_q.z(), eigen_q.z(), epsilon);
-}
-
-TEST(UAS, quaternion_from_rpy__paranoic_check)
-{
-	auto q1 = UAS::quaternion_from_rpy(1.0, 2.0, 3.0);
-	auto q2 = UAS::quaternion_from_rpy(Eigen::Vector3d(1.0, 2.0, 3.0));
-
-	EXPECT_NEAR(q1.w(), q2.w(), epsilon);
-	EXPECT_NEAR(q1.x(), q2.x(), epsilon);
-	EXPECT_NEAR(q1.y(), q2.y(), epsilon);
-	EXPECT_NEAR(q1.z(), q2.z(), epsilon);
-}
-
-TEST(UAS, quaternion_to_rpy__123)
-{
-	auto q = UAS::quaternion_from_rpy(1.0, 2.0, 3.0);
-	auto rpy = UAS::quaternion_to_rpy(q);
-
-	EXPECT_NEAR(1.0, rpy.x(), epsilon);
-	EXPECT_NEAR(2.0, rpy.y(), epsilon);
-	EXPECT_NEAR(3.0, rpy.z(), epsilon);
-}
-
-/* -*- test covariance transform -*- */
 
 
 int main(int argc, char **argv)

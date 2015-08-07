@@ -21,12 +21,12 @@
 #include <atomic>
 #include <Eigen/Eigen>
 #include <Eigen/Geometry>
-#include <tf/transform_datatypes.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <mavconn/interface.h>
 
+#include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 
 namespace mavros {
@@ -176,25 +176,18 @@ public:
 
 
 	/* -*- IMU data -*- */
-	void update_attitude_imu(tf::Quaternion &q, tf::Vector3 &av, tf::Vector3 &lacc);
 
-	/**
-	 * @brief Get Attitude angular velocity vector
-	 * @return angilar velocity [ENU, body-fixed]
-	 */
-	tf::Vector3 get_attitude_angular_velocity();
+	//! Store IMU data
+	void update_attitude_imu(sensor_msgs::Imu::Ptr &imu);
 
-	/**
-	 * @brief Get Attitude linear acceleration vector
-	 * @return linear acceleration [ENU, body-fixed]
-	 */
-	tf::Vector3 get_attitude_linear_acceleration();
+	//! Get IMU data
+	sensor_msgs::Imu::Ptr get_attitude_imu();
 
 	/**
 	 * @brief Get Attitude orientation quaternion
-	 * @return orientation quaternion [ENU, body-fixed]
+	 * @return orientation quaternion [ENU]
 	 */
-	tf::Quaternion get_attitude_orientation();
+	geometry_msgs::Quaternion get_attitude_orientation();
 
 
 	/* -*- GPS data -*- */
@@ -383,8 +376,19 @@ public:
 	 *
 	 * Replacement function for @a tf::getYaw()
 	 */
-	static inline double getYaw(const Eigen::Quaterniond &q) {
-		return quaternion_to_rpy(q).z();
+	static double quaternion_get_yaw(const Eigen::Quaterniond &q);
+
+	/**
+	 * @brief Store Quaternion to MAVLink float[4] format
+	 *
+	 * MAVLink uses wxyz order, wile Eigen::Quaterniond uses xyzw internal order,
+	 * so it can't be stored to array using Eigen::Map.
+	 */
+	static inline void quaternion_to_mavlink(const Eigen::Quaterniond &q, float qmsg[4]) {
+		qmsg[0] = q.w();
+		qmsg[1] = q.x();
+		qmsg[2] = q.y();
+		qmsg[3] = q.z();
 	}
 
 	/**
@@ -438,9 +442,7 @@ private:
 
 	std::atomic<bool> connected;
 
-	tf::Quaternion imu_orientation;
-	tf::Vector3 imu_angular_velocity;
-	tf::Vector3 imu_linear_acceleration;
+	sensor_msgs::Imu::Ptr imu_data;
 
 	sensor_msgs::NavSatFix::Ptr gps_fix;
 	float gps_eph;
